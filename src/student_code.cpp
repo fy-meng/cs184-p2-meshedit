@@ -108,10 +108,58 @@ namespace CGL {
     }
 
     VertexIter HalfedgeMesh::splitEdge(EdgeIter e0) {
-        // TODO Part 5.
-        // TODO This method should split the given edge and return an iterator to the newly inserted vertex.
-        // TODO The halfedge of this vertex should point along the edge that was split, rather than the new edges.
-        return newVertex();
+        // Part 5.
+        // This method should split the given edge and return an iterator to the newly inserted vertex.
+        // The halfedge of this vertex should point along the edge that was split, rather than the new edges.
+        if (e0->isBoundary())
+            return e0->halfedge()->vertex();
+
+        // Getting old halfedges
+        HalfedgeIter h0_old = e0->halfedge(), h1_old = h0_old->twin();
+        HalfedgeIter h0_next = h0_old->next(), h1_next = h1_old->next();
+        HalfedgeIter h0_prev = h0_next->next(), h1_prev = h1_next->next();
+
+        HalfedgeIter bs[] = {h0_next, h0_prev, h1_next, h1_prev};
+
+        FaceIter f0_old = h0_old->face(), f1_old = h1_old->face();
+
+        // Creating new halfedges, edges and faces
+        HalfedgeIter hs[] = {newHalfedge(), newHalfedge(), newHalfedge(), newHalfedge()};
+        HalfedgeIter ps[] = {newHalfedge(), newHalfedge(), newHalfedge(), newHalfedge()};
+        EdgeIter es[] = {newEdge(), newEdge(), newEdge(), newEdge()};
+        FaceIter fs[] = {newFace(), newFace(), newFace(), newFace()};
+
+        // Creating new vertex
+        VertexIter m = newVertex();
+        m->position = (h0_old->vertex()->position + h1_old->vertex()->position) / 2;
+        m->halfedge() = hs[0];
+
+        // Editing face by face
+        for (int i = 0; i < 4; i++) {
+            // Setting new halfedges
+            hs[i]->setNeighbors(bs[i], ps[(i + 3) % 4], m, es[i], fs[i]);
+            ps[i]->setNeighbors(hs[i], hs[(i + 1) % 4], bs[(i + 1) % 4]->vertex(), es[(i + 1) % 4], fs[i]);
+            bs[i]->next() = ps[i];
+            bs[i]->face() = fs[i];
+
+            // Setting new edges and faces
+            es[i]->halfedge() = hs[i];
+            fs[i]->halfedge() = hs[i];
+
+            // Handling old vertex
+            ps[i]->vertex()->halfedge() = ps[i];
+        }
+
+        // Removing old halfedges, edge and faces
+        deleteHalfedge(h0_old);
+        deleteHalfedge(h1_old);
+
+        deleteEdge(e0);
+
+        deleteFace(f0_old);
+        deleteFace(f1_old);
+
+        return m;
     }
 
 

@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "modernize-use-auto"
+
 #include "student_code.h"
 #include "mutablePriorityQueue.h"
 
@@ -31,7 +34,7 @@ namespace CGL {
         // (i.e. Unlike Part 1 where we performed one subdivision level per call to evaluateStep, this function
         // should apply de Casteljau's algorithm until it computes the final, evaluated point on the surface)
         std::vector<Vector3D> rowResult;
-        for (const auto &controlPoint : controlPoints)
+        for (const std::vector<Vector3D> &controlPoint : controlPoints)
             rowResult.push_back(evaluate1D(controlPoint, u));
         return evaluate1D(rowResult, v);
     }
@@ -62,13 +65,45 @@ namespace CGL {
         do {
             result += h->face()->normal();
             h = h->twin()->next();
-        } while(h != halfedge());
+        } while (h != halfedge());
         return result.unit();
     }
 
     EdgeIter HalfedgeMesh::flipEdge(EdgeIter e0) {
-        // TODO Part 4.
-        // TODO This method should flip the given edge and return an iterator to the flipped edge.
+        // Part 4.
+        // This method should flip the given edge and return an iterator to the flipped edge.
+        if (e0->isBoundary())
+            return e0;
+
+        // Getting old halfedges
+        HalfedgeIter h0_old = e0->halfedge(), h1_old = h0_old->twin();
+        HalfedgeIter h0_next = h0_old->next(), h1_next = h1_old->next();
+        HalfedgeIter h0_prev = h0_next->next(), h1_prev = h1_next->next();
+
+        // Creating new halfedges
+        HalfedgeIter h0_new = newHalfedge(), h1_new = newHalfedge();
+        e0->halfedge() = h0_new;
+
+        // Setting new face 0
+        h0_new->setNeighbors(h1_prev, h1_new, h0_prev->vertex(), e0, h1_prev->face());
+        h1_prev->next() = h0_next;
+        h0_next->next() = h0_new;
+        h0_next->face() = h1_prev->face();
+        h1_prev->face()->halfedge() = h0_new;
+        h0_next->vertex()->halfedge() = h0_next;
+
+        // Setting new face 1
+        h1_new->setNeighbors(h0_prev, h0_new, h1_prev->vertex(), e0, h0_prev->face());
+        h0_prev->next() = h1_next;
+        h1_next->next() = h1_new;
+        h1_next->face() = h0_prev->face();
+        h0_prev->face()->halfedge() = h1_new;
+        h1_next->vertex()->halfedge() = h1_next;
+
+        // Removing old halfedges
+        deleteHalfedge(h0_old);
+        deleteHalfedge(h1_old);
+
         return e0;
     }
 
@@ -114,3 +149,5 @@ namespace CGL {
         return;
     }
 }
+
+#pragma clang diagnostic pop

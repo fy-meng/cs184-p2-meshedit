@@ -52,11 +52,18 @@ namespace CGL {
 
 
     Vector3D Vertex::normal(void) const {
-        // TODO Part 3.
-        // TODO Returns an approximate unit normal at this vertex, computed by
-        // TODO taking the area-weighted average of the normals of neighboring
-        // TODO triangles, then normalizing.
-        return Vector3D();
+        // Part 3.
+        // Returns an approximate unit normal at this vertex, computed by
+        // taking the area-weighted average of the normals of neighboring
+        // triangles, then normalizing.
+
+        Vector3D result(0, 0, 0);
+        HalfedgeCIter h = halfedge();
+        do {
+            result += h->face()->normal();
+            h = h->twin()->next();
+        } while(h != halfedge());
+        return result.unit();
     }
 
     EdgeIter HalfedgeMesh::flipEdge(EdgeIter e0) {

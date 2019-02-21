@@ -63,7 +63,9 @@ namespace CGL {
         Vector3D result(0, 0, 0);
         HalfedgeCIter h = halfedge();
         do {
-            result += h->face()->normal();
+            Vector3D side0 = h->next()->vertex()->position - h->vertex()->position;
+            Vector3D side1 = h->next()->next()->vertex()->position - h->vertex()->position;
+            result += cross(side0, side1);
             h = h->twin()->next();
         } while (h != halfedge());
         return result.unit();

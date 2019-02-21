@@ -78,33 +78,25 @@ namespace CGL {
             return e0;
 
         // Getting old halfedges
-        HalfedgeIter h0_old = e0->halfedge(), h1_old = h0_old->twin();
-        HalfedgeIter h0_next = h0_old->next(), h1_next = h1_old->next();
+        HalfedgeIter h0 = e0->halfedge(), h1 = h0->twin();
+        HalfedgeIter h0_next = h0->next(), h1_next = h1->next();
         HalfedgeIter h0_prev = h0_next->next(), h1_prev = h1_next->next();
 
-        // Creating new halfedges
-        HalfedgeIter h0_new = newHalfedge(), h1_new = newHalfedge();
-        e0->halfedge() = h0_new;
-
         // Setting new face 0
-        h0_new->setNeighbors(h1_prev, h1_new, h0_prev->vertex(), e0, h1_prev->face());
+        h0->setNeighbors(h1_prev, h1, h0_prev->vertex(), e0, h1_prev->face());
         h1_prev->next() = h0_next;
-        h0_next->next() = h0_new;
+        h0_next->next() = h0;
         h0_next->face() = h1_prev->face();
-        h1_prev->face()->halfedge() = h0_new;
+        h1_prev->face()->halfedge() = h0;
         h0_next->vertex()->halfedge() = h0_next;
 
         // Setting new face 1
-        h1_new->setNeighbors(h0_prev, h0_new, h1_prev->vertex(), e0, h0_prev->face());
+        h1->setNeighbors(h0_prev, h0, h1_prev->vertex(), e0, h0_prev->face());
         h0_prev->next() = h1_next;
-        h1_next->next() = h1_new;
+        h1_next->next() = h1;
         h1_next->face() = h0_prev->face();
-        h0_prev->face()->halfedge() = h1_new;
+        h0_prev->face()->halfedge() = h1;
         h1_next->vertex()->halfedge() = h1_next;
-
-        // Removing old halfedges
-        deleteHalfedge(h0_old);
-        deleteHalfedge(h1_old);
 
         return e0;
     }
@@ -202,7 +194,6 @@ namespace CGL {
         // Compute the updated vertex positions associated with edges, and
         // store it in Edge::newPosition. Also mark each edge as being en edge
         // of the original mesh.
-        EdgeIter oldEdgeBegin = mesh.edgesBegin(), oldEdgeEnd = mesh.edgesEnd();
         for (EdgeIter e = mesh.edgesBegin(); e != mesh.edgesEnd(); e++) {
             e->isNew = false;
             e->newPosition = subdivNewLocation(e);

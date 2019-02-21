@@ -1,23 +1,24 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<style>
-  body {
-    padding: 100px;
-    width: 1000px;
-    margin: auto;
-    text-align: left;
-    font-weight: 300;
-    font-family: 'Open Sans', sans-serif;
-    color: #121212;
-  }
-  h1, h2, h3, h4 {
-    font-family: 'Source Sans Pro', sans-serif;
-  }
-</style>
-<title>CS 184 Mesh Editor</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+    <style>
+        body {
+            padding: 100px;
+            width: 1000px;
+            margin: auto;
+            text-align: left;
+            font-weight: 300;
+            font-family: 'Open Sans', sans-serif;
+            color: #121212;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Source Sans Pro', sans-serif;
+        }
+    </style>
+    <title>CS 184 Mesh Editor</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
 </head>
 
 
@@ -25,69 +26,218 @@
 
 <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2019</h1>
 <h1 align="middle">Project 2: Mesh Editor</h1>
-<h2 align="middle">YOUR NAME</h2>
+<h2 align="middle">Fanyu Meng</h2>
 
 <br><br>
 
-<div>
 
 <h2 align="middle">Overview</h2>
-<p>Give a high-level overview of what you implemented in this project. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the project.</p>
+<p>In this project, we implemented add some basic functionality to a triangle mesh renderer. In this first part, we
+    implemented Bezier curve and surfaces so that the renderer can sample from a surface and create a mesh; in the
+    second part, we enable flip, split and upsampling for the mesh.</p>
 
 <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
 
 <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
 
-<p>Here is an example 2x2 gridlike structure using an HTML table. Each <b>tr</b> is a row and each <b>td</b> is a column in that row. You might find this useful for framing and showing your result images in an organized fashion.</p>
+<p>The idea of de Casteljau's algorithm is to keep using linear interpolation on the control points until the number
+    of control points becomes 1. Our implementation is just to take each consecutive pair of points in the last
+    layer and apply linear interpolation on each of the pairs. </p>
 
 <div align="middle">
-  <table style="width=100%">
-    <tr>
-      <td>
-        <img src="images/image1.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-      <td>
-        <img src="images/image2.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-    </tr>
-    <br>
-    <tr>
-      <td>
-        <img src="images/image3.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-      <td>
-        <img src="images/image4.png" align="middle" width="400px"/>
-        <figcaption align="middle">Caption goes here.</figcaption>
-      </td>
-    </tr>
-  </table>
+    <img src="images/p1_bzc_layers.gif" align="middle" width="50%"/>
+    <figcaption align="middle">The layers of evaluation of a Bezier curve.</figcaption>
+</div>
+
+<div align="middle">
+    <img src="images/p1_bzc_scroll.gif" align="middle" width="50%"/>
+    <figcaption align="middle">A Bezier curve with degree of 6.</figcaption>
 </div>
 
 
 <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
 
+<p>Higher dimensional de Casteljau's algorithm is to reduce dimensions by applying linear de Casteljau's algorithm
+    dimension by dimension. In 3D case, the algorithm is to find linear Bezier curves on each row of control points,
+    and then apply the linear algorithm again on the results.</p>
+
+<div align="middle">
+    <img src="images/p2_bez_teapot.png" align="middle" width="50%"/>
+    <figcaption align="middle">This is not a teapot.</figcaption>
+</div>
 
 
 <h2 align="middle">Section II: Sampling</h2>
 
 <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
 
+<p>In this part, we compute the normal vector at a vertex by taking a linear combination of each neighbor surface's
+    normal vector by their area. We achieve this by traversing the surfaces using halfedges, finding the vectors of two
+    sides that come from the same vertex, and taking cross product on the two vectors. This the cross product is the
+    area-weighted normal vector of the surface, so we just sum the normal vectors up and normalize the result. This
+    allows the shader to compute lighting on the surface. </p>
+
+<div align="middle">
+    <table width="100%" align="middle">
+        <tr>
+            <td align="middle">
+                <img src="images/p3_normal_off.png" width="70%"/>
+                <figcaption align="middle">Without using smooth normal vectors.</figcaption>
+            </td>
+            <td align="middle">
+                <img src="images/p3_normal_on.png" width="70%"/>
+                <figcaption align="middle">Using smooth normal vectors.</figcaption>
+            </td>
+        </tr>
+    </table>
+</div>
+
 
 <h3 align="middle">Part 4: Half-edge flip</h3>
+
+<p>We implement a halfedge flip by reconnecting the two halfedges's <code>next</code> pointer to a different set of
+    surrounding halfedges. The <code>next</code> and <code>face</code> also need to be adjusted. To ensure connectivity,
+    the <code>halfedge</code> pointer of the two vertices of the original edge also need to be re-adjusted. The best way
+    to think of about this is to draw a picture and label all halfedges, and adjust the pointers accordingly.</p>
+
+<div align="middle">
+    <table width="100%" align="middle">
+        <tr>
+            <td align="middle">
+                <img src="images/p4_flip_0.png" width="70%"/>
+                <figcaption align="middle">A teapot.</figcaption>
+            </td>
+            <td align="middle">
+                <img src="images/p4_flip_1.png" width="70%"/>
+                <figcaption align="middle">The teapot after flipping an edge.</figcaption>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<p>Note that the surface seems to be concave into the surface, since the two triangles on the sides of the edge is not
+    on the same surface.</p>
 
 
 <h3 align="middle">Part 5: Half-edge split</h3>
 
+<p>We implement halfedge split by keeping arrays of outward halfedges from the new vertex, inward halfedges,
+    surrounding halfedges, surfaces, edges and vertices. Since the process of connecting one of the new surfaces is
+    symmetric to the other ones, we implement the reconnecting rule inside a loop. There should be 4 elements in each of
+    the 6 arrays, and we can access previous element by invoking index <code>(i + 1) % 4</code> for the next set and
+    <code>(i + 3) % 4</code> for the previous set. <br>
+
+    We also reuse all of the existing edges and surfaces. We achieve this by instead of initializing the array with new
+    elements, we put the original reference in the array. Since all of the connecting is done through accessing the four
+    surrounding halfedges, we can freely edit the pointers in the reused halfedges, edges and surfaces.</p>
+
+<div align="middle">
+    <table width="100%" align="middle">
+        <tr>
+            <td align="middle">
+                <img src="images/p5_split_0.png" width="80%"/>
+                <figcaption align="middle">A teapot.</figcaption>
+            </td>
+            <td align="middle">
+                <img src="images/p5_split_1.png" width="80%"/>
+                <figcaption align="middle">After splitting some edges.</figcaption>
+            </td>
+            <td align="middle">
+                <img src="images/p5_split_2.png" width="80%"/>
+                <figcaption align="middle">After splitting and flipping some edges.</figcaption>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<p>One bug that I spent hours confusing is on the index shift. Originally I was using <code>(i - 1) % 4</code> to
+    access the previous element. However, I originally presume that C++'s modulo always yield a positive number. However
+    that is not true, and <code>-1 % 4 = -1</code>. Also, there's no array protection, so invoking an negative index on
+    an array yields no errors. After a few hours, I finally notices that one of the halfedges is not refereed by any
+    edges, which cannot be true due to symmetry. This helps me find the bug.</p>
+
 
 <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
 
-<h2 align="middle">Section III: Mesh Competition</h2>
-<p>If you are not participating in the optional mesh competition, don't worry about this section!</p>
+<p>We implement upsampling following the guideline:</p>
+<ol>
+    <li>Calculate and store the new location of the vertices, and mark all vertices as old;</li>
+    <li>Calculate the location of the edge midpoints, and mark all edges as old;</li>
+    <li>Split all old edges. We iterate through the edges by assuming the newly added edges are all on the back of the
+        list. By only advance times of the number of old edges, we are able to iterate through all original edges. We
+        also store the new midpoint locations into the newly created vertices, and mark new edges as new. Note that the
+        original edge that was split into two are both considered as old edges. The mark on the edges is to determine
+        which edge to flip in the next step;
+    </li>
+    <li>Flip all <b>new</b> edge connecting an old and a new vertex;</li>
+    <li>Assign the new location of all vertices.</li>
+</ol>
 
-<h3 align="middle">Part 7: Design your own mesh!</h3>
+<div align="middle">
+    <table width="100%" align="middle">
+        <tr>
+            <td align="middle">
+                <img src="images/p6_upsampling_0.png" width="100%"/>
+            </td>
+            <td align="middle">
+                <img src="images/p6_upsampling_1.png" width="100%"/>
+            </td>
+            <td align="middle">
+                <img src="images/p6_upsampling_2.png" width="100%"/>
+            </td>
+            <td align="middle">
+                <img src="images/p6_upsampling_3.png" width="100%"/>
+            </td>
+        </tr>
+    </table>
+    <figcaption align="middle">Upsampling on a torus.</figcaption>
+</div>
+
+<p>During the upsampling process, all hard vertices and edges are softened. We can lessen this effect by pre-splitting
+    along en edge to make it sharper after the upsampling as shown below. </p>
+
+<div align="middle">
+    <table width="100%" align="middle">
+        <tr>
+            <td align="middle">
+                <img src="images/p6_edge_0.png" width="70%"/>
+                <figcaption align="middle">Pre-splitting along an edge.</figcaption>
+            </td>
+            <td align="middle">
+                <img src="images/p6_edge_1.png" width="70%"/>
+                <figcaption align="middle">Harder edge after upsampling.</figcaption>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<p>For <code>cube.dae</code></code>, the reason that it does not subdivide symmetrically is that its original triangle
+    mesh is not symmetric. By flipping the edges on thh side, the model could become symmetric as shown below.</p>
+
+<div align="middle">
+    <table width="100%" align="middle">
+        <tr>
+            <td align="middle">
+                <img src="images/p6_cube_0.png" width="70%"/>
+                <figcaption align="middle">The original cube.</figcaption>
+            </td>
+            <td align="middle">
+                <img src="images/p6_cube_1.png" width="70%"/>
+                <figcaption align="middle">After flipping some edges.</figcaption>
+            </td>
+        </tr>
+        <tr>
+            <td align="middle">
+                <img src="images/p6_cube_2.png" width="70%"/>
+                <figcaption align="middle">Asymmetric shape after upsampling.</figcaption>
+            </td>
+            <td align="middle">
+                <img src="images/p6_cube_3.png" width="70%"/>
+                <figcaption align="middle">Symmetric shape after upsampling in roughly the same angle.</figcaption>
+            </td>
+        </tr>
+    </table>
+</div>
 
 </body>
 </html>
